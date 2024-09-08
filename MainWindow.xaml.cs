@@ -147,8 +147,9 @@ namespace MetaExchangeWPF
         // Function to display a bar chart for each order book
         private void DisplayOrderBookChart(ExchangeData exchange)
         {
-            var modelAsks = new PlotModel { Title = $"Asks - {exchange.Id}" };
-            var modelBids = new PlotModel { Title = $"Bids - {exchange.Id}" };
+            // Update the titles to include available funds for the exchange
+            var modelAsks = new PlotModel { Title = $"Asks - {exchange.Id} (Crypto Available: {exchange.AvailableFunds.Crypto})" };
+            var modelBids = new PlotModel { Title = $"Bids - {exchange.Id} (Euro Available: {exchange.AvailableFunds.Euro})" };
 
             // Sort asks in ascending order (lowest price first)
             var sortedAsks = exchange.OrderBook.Asks.OrderBy(a => a.Order.Price).ToList();
