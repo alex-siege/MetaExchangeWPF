@@ -28,11 +28,11 @@ public class MetaExchangeLogic
         // Calculate the total available funds across all exchanges
         if (orderType == "Buy")
         {
-            totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Crypto); // Assuming Crypto is the asset being bought
+            totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Crypto); // Assuming Crypto is being bought
         }
         else // Sell
         {
-            totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Crypto); // Assuming Crypto is being sold
+            totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Euro); // Assuming Crypto is being sold
         }
 
         // Check if the amount exceeds the total available funds
