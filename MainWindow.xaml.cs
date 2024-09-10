@@ -181,7 +181,7 @@ namespace MetaExchangeWPF
                 Position = AxisPosition.Left,
                 Title = "Price",
                 Key = "PriceAxis",
-                FontSize = 15
+                FontSize = 1
             };
 
             // Add bars and corresponding price labels for asks
@@ -197,7 +197,7 @@ namespace MetaExchangeWPF
                 Position = AxisPosition.Left,
                 Title = "Price",
                 Key = "PriceAxis",
-                FontSize = 15
+                FontSize = 1
             };
 
             // Add bars and corresponding price labels for bids
