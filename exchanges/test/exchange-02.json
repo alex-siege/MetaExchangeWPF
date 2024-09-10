@@ -1,0 +1,93 @@
+{
+  "Id": "exchange-02",
+  "AvailableFunds": {
+    "Crypto": 2,
+    "Euro": 120000
+  },
+  "OrderBook": {
+    "Bids": [
+      {
+        "Order": {
+          "Id": "e770ad2e-ef95-407a-94c5-8ad950b26059",
+          "Time": "2024-03-01T22:26:03.464Z",
+          "Type": "Buy",
+          "Kind": "Limit",
+          "Amount": 4,
+          "Price": 51500
+        }
+      },
+      {
+        "Order": {
+          "Id": "c69daeae-e354-47b0-a1ef-3038664a8dd7",
+          "Time": "2024-03-01T07:27:08.258Z",
+          "Type": "Buy",
+          "Kind": "Limit",
+          "Amount": 3,
+          "Price": 52500
+        }
+      },
+      {
+        "Order": {
+          "Id": "4812e720-6b73-419f-9875-1f677de0bf29",
+          "Time": "2024-03-01T07:31:01.261Z",
+          "Type": "Buy",
+          "Kind": "Limit",
+          "Amount": 2,
+          "Price": 53500
+        }
+      },
+      {
+        "Order": {
+          "Id": "732557cd-db23-4792-af94-e2edbc00a9b6",
+          "Time": "2024-03-01T15:17:21.810Z",
+          "Type": "Buy",
+          "Kind": "Limit",
+          "Amount": 1,
+          "Price": 54500
+        }
+      }
+    ],
+    "Asks": [
+      {
+        "Order": {
+          "Id": "ff9ec95f-6829-4ac1-ac57-21e0b9dbdc6d",
+          "Time": "2024-03-01T22:14:09.024Z",
+          "Type": "Sell",
+          "Kind": "Limit",
+          "Amount": 1,
+          "Price": 60500
+        }
+      },
+      {
+        "Order": {
+          "Id": "3f4dd844-2a32-40fe-a18e-b7fdc6cbd5ee",
+          "Time": "2024-03-01T20:08:03.812Z",
+          "Type": "Sell",
+          "Kind": "Limit",
+          "Amount": 2,
+          "Price": 61500
+        }
+      },
+      {
+        "Order": {
+          "Id": "b0cb1bfc-f160-4eb8-9d77-3ea3cc0eb154",
+          "Time": "2024-03-01T00:04:57.663Z",
+          "Type": "Sell",
+          "Kind": "Limit",
+          "Amount": 3,
+          "Price": 62500
+        }
+      },
+      {
+        "Order": {
+          "Id": "5eeedd1e-aa4e-471e-8788-3f157bdd99e9",
+          "Time": "2024-03-01T13:46:27.031Z",
+          "Type": "Sell",
+          "Kind": "Limit",
+          "Amount": 4,
+          "Price": 63500
+        }
+      }
+    ]
+  }
+}

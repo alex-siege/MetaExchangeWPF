@@ -92,44 +92,60 @@ public class MetaExchangeLogic
             decimal remainingAmount = amount - finalAccumulatedAmount;
             decimal orderAmountToTake = Math.Min(remainingAmount, Math.Min(order.Amount, availableFunds[order.Exchange]));
 
+            // Initialize the exchange object before accessing it
+            var exchange = exchanges.FirstOrDefault(e => e.Id == order.Exchange);
+            if (exchange == null) continue;
+
+            // For Sell: Check if the exchange has enough Euro to fulfill the sell order
+            if (orderType == "Sell")
+            {
+                // Calculate the Euro needed for this order
+                decimal euroRequired = orderAmountToTake * order.Price;
+
+                // Check if the exchange has enough Euro
+                if (exchange.AvailableFunds.Euro < euroRequired)
+                {
+                    // If not enough Euro is available, skip this order
+                    continue;
+                }
+
+                // Reduce the Euro balance on the exchange
+                exchange.AvailableFunds.Euro -= euroRequired;
+            }
+
             // Reduce available funds on the exchange after each order execution
             availableFunds[order.Exchange] -= orderAmountToTake;
 
             // Update exchange data (Available funds, orders, etc.)
-            var exchange = exchanges.FirstOrDefault(e => e.Id == order.Exchange);
-            if (exchange != null)
+            if (orderType == "Buy")
             {
-                if (orderType == "Buy")
+                exchange.AvailableFunds.Euro += orderAmountToTake * order.Price;
+                exchange.AvailableFunds.Crypto -= orderAmountToTake;
+
+                var askOrder = exchange.OrderBook.Asks.FirstOrDefault(a => a.Order.Price == order.Price && a.Order.Amount == order.Amount);
+                if (askOrder != null)
                 {
-                    exchange.AvailableFunds.Euro += orderAmountToTake * order.Price;
-                    exchange.AvailableFunds.Crypto -= orderAmountToTake;
-
-                    var askOrder = exchange.OrderBook.Asks.FirstOrDefault(a => a.Order.Price == order.Price && a.Order.Amount == order.Amount);
-                    if (askOrder != null)
-                    {
-                        askOrder.Order.Amount -= orderAmountToTake;
-                        if (askOrder.Order.Amount <= 0)
-                            exchange.OrderBook.Asks.Remove(askOrder);
-                    }
+                    askOrder.Order.Amount -= orderAmountToTake;
+                    if (askOrder.Order.Amount <= 0)
+                        exchange.OrderBook.Asks.Remove(askOrder);
                 }
-                else
-                {
-                    exchange.AvailableFunds.Euro -= orderAmountToTake * order.Price;
-                    exchange.AvailableFunds.Crypto += orderAmountToTake;
-
-                    var bidOrder = exchange.OrderBook.Bids.FirstOrDefault(b => b.Order.Price == order.Price && b.Order.Amount == order.Amount);
-                    if (bidOrder != null)
-                    {
-                        bidOrder.Order.Amount -= orderAmountToTake;
-                        if (bidOrder.Order.Amount <= 0)
-                            exchange.OrderBook.Bids.Remove(bidOrder);
-                    }
-                }
-
-                // Write the updated exchange data back to the JSON file
-                string filePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges", $"{exchange.Id}.json");
-                File.WriteAllText(filePath, JsonConvert.SerializeObject(exchange, Formatting.Indented));
             }
+            else // Sell
+            {
+                exchange.AvailableFunds.Crypto += orderAmountToTake;
+
+                var bidOrder = exchange.OrderBook.Bids.FirstOrDefault(b => b.Order.Price == order.Price && b.Order.Amount == order.Amount);
+                if (bidOrder != null)
+                {
+                    bidOrder.Order.Amount -= orderAmountToTake;
+                    if (bidOrder.Order.Amount <= 0)
+                        exchange.OrderBook.Bids.Remove(bidOrder);
+                }
+            }
+
+            // Write the updated exchange data back to the JSON file
+            string filePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges", $"{exchange.Id}.json");
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(exchange, Formatting.Indented));
 
             // Add the executed order to the plan
             executionPlan.ExchangeOrders.Add(new ExchangeOrder
