@@ -1,55 +1,61 @@
 ﻿using MetaExchangeWPF;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 public class MetaExchangeLogic
 {
+    // Class representing the final execution plan, including the best price and a list of exchange orders
     public class ExecutionPlan
     {
+        // The best price achieved for the order (weighted average)
         public decimal BestPrice { get; set; }
-        public List<ExchangeOrder> ExchangeOrders { get; set; }
+        // List of individual exchange orders executed to achieve the plan
+        public List<ExchangeOrder>? ExchangeOrders { get; set; }
     }
 
-    public class ExchangeOrder
-    {
-        public string Exchange { get; set; }
-        public decimal Price { get; set; }
-        public decimal Amount { get; set; }
-    }
-
+    /// <summary>
+    /// Determines the best execution plan based on the type of order (Buy or Sell), the amount, and available exchanges.
+    /// </summary>
+    /// <param name="orderType">"Buy" or "Sell" indicating the type of transaction</param>
+    /// <param name="amount">The amount of crypto to buy or sell</param>
+    /// <param name="exchanges">The list of available exchanges and their order books</param>
+    /// <param name="exceedsLimit">Indicates if the order amount exceeds available funds</param>
+    /// <param name="totalAvailableFunds">The total available funds in all exchanges (Crypto for Buy, Euro for Sell)</param>
+    /// <returns>An execution plan with the best price and list of orders</returns>
     public static ExecutionPlan GetBestExecution(string orderType, decimal amount, List<ExchangeData> exchanges, out bool exceedsLimit, out decimal totalAvailableFunds)
     {
+        // Initialize an empty execution plan
         var executionPlan = new ExecutionPlan
         {
             ExchangeOrders = new List<ExchangeOrder>()
         };
 
+        // List of relevant orders, based on order type (Buy or Sell)
         List<ExchangeOrder> relevantOrders;
 
         if (orderType == "Buy")
         {
-            // For Buy: Get all the ask orders (Crypto being sold)
-            relevantOrders = exchanges.SelectMany(e => e.OrderBook.Asks.Select(a => new ExchangeOrder { Exchange = e.Id, Price = a.Order.Price, Amount = a.Order.Amount }))
-                                      .OrderBy(o => o.Price)
-                                      .ToList();
+            // For Buy: Collect all ask orders (Crypto being sold)
+            relevantOrders = exchanges
+                .SelectMany(e => e.OrderBook.Asks.Select(a => new ExchangeOrder { Exchange = e.Id, Price = a.Order.Price, Amount = a.Order.Amount }))
+                .OrderBy(o => o.Price)  // Sort by price in ascending order (lowest first)
+                .ToList();
 
-            // For Buy: Calculate total available Crypto across all exchanges
+            // Calculate the total available Crypto across all exchanges
             totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Crypto);
 
-            // Check if the amount exceeds the available Crypto
+            // Check if the requested amount exceeds the available Crypto
             exceedsLimit = amount > totalAvailableFunds;
         }
         else // Sell
         {
-            // For Sell: Get all the bid orders (people buying Crypto)
-            relevantOrders = exchanges.SelectMany(e => e.OrderBook.Bids.Select(b => new ExchangeOrder { Exchange = e.Id, Price = b.Order.Price, Amount = b.Order.Amount }))
-                                      .OrderByDescending(o => o.Price)
-                                      .ToList();
+            // For Sell: Collect all bid orders (buyers)
+            relevantOrders = exchanges
+                .SelectMany(e => e.OrderBook.Bids.Select(b => new ExchangeOrder { Exchange = e.Id, Price = b.Order.Price, Amount = b.Order.Amount }))
+                .OrderByDescending(o => o.Price)  // Sort by price in descending order (highest first)
+                .ToList();
 
-            // For Sell: First, calculate the potential Euro we'd get for selling our Crypto
+            // Calculate the total Euro we would get for selling the requested amount of Crypto
             decimal totalEuroForCrypto = 0m;
             decimal totalAccumulatedAmount = 0m;
 
@@ -61,22 +67,23 @@ public class MetaExchangeLogic
                 decimal remainingAmount = amount - totalAccumulatedAmount;
                 decimal orderAmountToTake = Math.Min(remainingAmount, order.Amount);
 
-                // Calculate how much Euro we would get from this order
+                // Add the potential Euro earned from this order
                 totalEuroForCrypto += orderAmountToTake * order.Price;
                 totalAccumulatedAmount += orderAmountToTake;
             }
 
-            // Now that we have the total Euro we would get, let's compare it with the available Euro funds
+            // Compare the total Euro we'd get with the available Euro funds in all exchanges
             totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Euro);
-            exceedsLimit = totalEuroForCrypto > totalAvailableFunds; // Assign value to exceedsLimit
+            exceedsLimit = totalEuroForCrypto > totalAvailableFunds;
         }
 
+        // If the amount exceeds the limit, return an empty plan
         if (exceedsLimit)
         {
-            return executionPlan; // No order can be fulfilled
+            return executionPlan;
         }
 
-        // Execute the order if the limits are not exceeded
+        // Execute the order if limits are not exceeded
         decimal finalAccumulatedAmount = 0m;
         var availableFunds = exchanges.ToDictionary(e => e.Id, e => orderType == "Buy" ? e.AvailableFunds.Crypto : e.AvailableFunds.Euro);
 
@@ -85,43 +92,37 @@ public class MetaExchangeLogic
             if (finalAccumulatedAmount >= amount)
                 break;
 
-            // Check if the exchange has enough available funds
+            // Ensure the exchange has enough funds for the transaction
             if (availableFunds[order.Exchange] <= 0)
                 continue;
 
             decimal remainingAmount = amount - finalAccumulatedAmount;
             decimal orderAmountToTake = Math.Min(remainingAmount, Math.Min(order.Amount, availableFunds[order.Exchange]));
 
-            // Initialize the exchange object before accessing it
+            // Get the exchange data for the current order
             var exchange = exchanges.FirstOrDefault(e => e.Id == order.Exchange);
             if (exchange == null) continue;
 
-            // For Sell: Check if the exchange has enough Euro to fulfill the sell order
+            // Check for sufficient Euro in the exchange for Sell orders
             if (orderType == "Sell")
             {
-                // Calculate the Euro needed for this order
                 decimal euroRequired = orderAmountToTake * order.Price;
-
-                // Check if the exchange has enough Euro
                 if (exchange.AvailableFunds.Euro < euroRequired)
-                {
-                    // If not enough Euro is available, skip this order
                     continue;
-                }
 
-                // Reduce the Euro balance on the exchange
-                exchange.AvailableFunds.Euro -= euroRequired;
+                exchange.AvailableFunds.Euro -= euroRequired;  // Deduct Euro from exchange
             }
 
-            // Reduce available funds on the exchange after each order execution
+            // Deduct the available funds on the exchange
             availableFunds[order.Exchange] -= orderAmountToTake;
 
-            // Update exchange data (Available funds, orders, etc.)
+            // Update the exchange data for Buy orders
             if (orderType == "Buy")
             {
-                exchange.AvailableFunds.Euro += orderAmountToTake * order.Price;
-                exchange.AvailableFunds.Crypto -= orderAmountToTake;
+                exchange.AvailableFunds.Euro += orderAmountToTake * order.Price;  // Increase Euro
+                exchange.AvailableFunds.Crypto -= orderAmountToTake;  // Decrease Crypto
 
+                // Update the order book by reducing or removing fulfilled ask orders
                 var askOrder = exchange.OrderBook.Asks.FirstOrDefault(a => a.Order.Price == order.Price && a.Order.Amount == order.Amount);
                 if (askOrder != null)
                 {
@@ -132,8 +133,9 @@ public class MetaExchangeLogic
             }
             else // Sell
             {
-                exchange.AvailableFunds.Crypto += orderAmountToTake;
+                exchange.AvailableFunds.Crypto += orderAmountToTake;  // Increase Crypto for sell
 
+                // Update the order book by reducing or removing fulfilled bid orders
                 var bidOrder = exchange.OrderBook.Bids.FirstOrDefault(b => b.Order.Price == order.Price && b.Order.Amount == order.Amount);
                 if (bidOrder != null)
                 {
@@ -143,7 +145,7 @@ public class MetaExchangeLogic
                 }
             }
 
-            // Write the updated exchange data back to the JSON file
+            // Save the updated exchange data to the JSON file
             string filePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges", $"{exchange.Id}.json");
             File.WriteAllText(filePath, JsonConvert.SerializeObject(exchange, Formatting.Indented));
 
@@ -158,18 +160,17 @@ public class MetaExchangeLogic
             finalAccumulatedAmount += orderAmountToTake;
         }
 
+        // Calculate the weighted average price of all executed orders
         if (executionPlan.ExchangeOrders.Any())
         {
-            // Compute the weighted average price
             decimal totalCost = executionPlan.ExchangeOrders.Sum(o => o.Price * o.Amount);
             executionPlan.BestPrice = totalCost / finalAccumulatedAmount;
         }
         else
         {
-            executionPlan.BestPrice = 0; // No suitable orders found
+            executionPlan.BestPrice = 0; // No orders executed
         }
 
         return executionPlan;
     }
-
 }

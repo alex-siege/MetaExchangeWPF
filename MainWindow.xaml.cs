@@ -1,13 +1,5 @@
-﻿using System.Text;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-//using System.Windows.Shapes;
 using System.IO;
 using Newtonsoft.Json;
 using OxyPlot.Axes;
@@ -15,6 +7,7 @@ using OxyPlot.Series;
 using OxyPlot.Wpf;
 using OxyPlot;
 using System.Diagnostics;
+using System.Windows.Media;
 
 namespace MetaExchangeWPF
 {
@@ -23,23 +16,29 @@ namespace MetaExchangeWPF
     /// </summary>
     public partial class MainWindow : Window
     {
-        private List<ExchangeData> loadedExchanges = new List<ExchangeData>(); // Store all exchanges here
+        // List to store all the loaded exchange data
+        private List<ExchangeData> loadedExchanges = new List<ExchangeData>();
 
         public MainWindow()
         {
             InitializeComponent();
+            // Automatically load exchanges upon starting the application
+            LoadExchanges_Click(this, null);
         }
 
-        // Function to load and deserialize exchange data from the "exchanges" folder
+        /// <summary>
+        /// Loads and deserializes exchange data from JSON files located in the "exchanges" folder.
+        /// </summary>
+        /// <returns>List of exchange data loaded from the folder</returns>
         private List<ExchangeData> LoadExchangesFromFolder()
         {
             List<ExchangeData> exchanges = new List<ExchangeData>();
             string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges");
 
-            // Check if the folder exists
+            // Check if the exchanges folder exists
             if (Directory.Exists(folderPath))
             {
-                // Load all JSON files from the 'exchanges' folder
+                // Get all JSON files in the folder
                 var exchangeFiles = Directory.GetFiles(folderPath, "*.json");
 
                 foreach (var file in exchangeFiles)
@@ -52,11 +51,12 @@ namespace MetaExchangeWPF
 
                         if (exchange != null)
                         {
-                            exchanges.Add(exchange); // Add each exchange to the list
+                            exchanges.Add(exchange); // Add the exchange data to the list
                         }
                     }
                     catch (Exception ex)
                     {
+                        // Handle any errors during file reading or deserialization
                         MessageBox.Show($"Error loading exchange data from {file}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
@@ -69,34 +69,40 @@ namespace MetaExchangeWPF
             return exchanges;
         }
 
+        /// <summary>
+        /// Handles the event for executing an order. Loads exchanges and processes the order to get the best execution plan.
+        /// </summary>
         private void ExecuteOrder_Click(object sender, RoutedEventArgs e)
         {
-            loadedExchanges = LoadExchangesFromFolder(); // Load exchanges from the folder
+            // Load the latest exchange data
+            loadedExchanges = LoadExchangesFromFolder();
 
+            // Get the order type ("Buy" or "Sell")
             string orderType = ((ComboBoxItem)OrderTypeComboBox.SelectedItem).Content.ToString();
             decimal amount;
 
+            // Validate the entered amount
             if (decimal.TryParse(AmountTextBox.Text, out amount))
             {
-                // Variables to check for limit and available funds
+                // Variables to check if the amount exceeds the available funds and to store total available funds
                 bool exceedsLimit;
                 decimal totalAvailableFunds;
 
-                // Get the execution plan
+                // Get the best execution plan based on the order type, amount, and exchange data
                 var executionPlan = MetaExchangeLogic.GetBestExecution(orderType, amount, loadedExchanges, out exceedsLimit, out totalAvailableFunds);
 
                 if (exceedsLimit)
                 {
-                    // Display a message indicating the limit has been exceeded
-                    ResultTextBlock.Text = $"The amount you want to {orderType.ToLower()} exceeds the available funds of all exchanges.\n" +
+                    // Display a message if the requested amount exceeds available funds
+                    ResultTextBlock.Text = $"The amount you want to {orderType.ToLower()} exceeds the available funds of all exchanges to cover your transaction.\n" +
                                            $"Requested: {amount}\n" +
                                            $"Available: {totalAvailableFunds}";
                 }
                 else
                 {
-                    // Display the result of the execution plan
-                    ResultTextBlock.Text = $"Best Price: {executionPlan.BestPrice}\n" +
-                                           $"Orders:\n" +
+                    // Display the execution plan results in the result text block
+                    ResultTextBlock.Text = $"Best Price (Average): {executionPlan.BestPrice}\n" +
+                                           $"\nOrders:\n" +
                                            string.Join("\n", executionPlan.ExchangeOrders.Select(o => $"Exchange: {o.Exchange}, Price: {o.Price}, Amount: {o.Amount}"));
                 }
             }
@@ -106,8 +112,9 @@ namespace MetaExchangeWPF
             }
         }
 
-
-
+        /// <summary>
+        /// Handles the event for loading exchange data and displays the order book charts for each exchange.
+        /// </summary>
         private void LoadExchanges_Click(object sender, RoutedEventArgs e)
         {
             // Clear the panel before loading new order books
@@ -116,7 +123,7 @@ namespace MetaExchangeWPF
             // Path to the "exchanges" folder
             string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges");
 
-            // Load all JSON files in the folder
+            // Check if the exchanges folder exists
             if (Directory.Exists(folderPath))
             {
                 string[] files = Directory.GetFiles(folderPath, "*.json");
@@ -125,15 +132,16 @@ namespace MetaExchangeWPF
                 {
                     try
                     {
-                        // Read and deserialize the JSON file
+                        // Read and deserialize the exchange data from the JSON file
                         var jsonData = File.ReadAllText(file);
                         var exchangeData = JsonConvert.DeserializeObject<ExchangeData>(jsonData);
 
-                        // Ensure a new plot is created for each exchange
+                        // Display the order book chart for the exchange
                         DisplayOrderBookChart(exchangeData);
                     }
                     catch (Exception ex)
                     {
+                        // Handle any errors during the loading process
                         MessageBox.Show($"Error loading file: {file}\n{ex.Message}");
                     }
                 }
@@ -144,74 +152,118 @@ namespace MetaExchangeWPF
             }
         }
 
-        // Function to display a bar chart for each order book
+        /// <summary>
+        /// Displays the order book (asks and bids) for a given exchange using bar charts.
+        /// </summary>
+        /// <param name="exchange">Exchange data containing order books and available funds</param>
         private void DisplayOrderBookChart(ExchangeData exchange)
         {
-            // Update the titles to include available funds for the exchange
-            var modelAsks = new PlotModel { Title = $"Asks - {exchange.Id} (Crypto Available: {exchange.AvailableFunds.Crypto})" };
-            var modelBids = new PlotModel { Title = $"Bids - {exchange.Id} (Euro Available: {exchange.AvailableFunds.Euro})" };
+            // Create a grid to hold the available funds and the order book charts
+            var containerGrid = new Grid
+            {
+                Margin = new Thickness(10, 10, 10, 0),
+                Height = 610,
+                Width = 500
+            };
 
-            // Sort asks in ascending order (lowest price first)
+            // Define rows for available funds, asks chart, and bids chart
+            containerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            containerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            containerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            // Display the available funds at the top of the container grid
+            var fundsTextBlock = new TextBlock
+            {
+                Text = $"Available Funds:\n Euro = {exchange.AvailableFunds.Euro},\n Crypto = {exchange.AvailableFunds.Crypto}",
+                FontSize = 18,
+                FontWeight = System.Windows.FontWeights.Bold,
+                Foreground = new SolidColorBrush(Colors.DarkBlue),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // Place the available funds TextBlock in the first row
+            Grid.SetRow(fundsTextBlock, 0);
+            containerGrid.Children.Add(fundsTextBlock);
+
+            // Prepare the PlotModel for asks
+            var modelAsks = new PlotModel { Title = $"Ask-Prices of {exchange.Id}" };
+            var modelBids = new PlotModel { Title = $"Bid-Prices of {exchange.Id}" };
+
+            // Sort and process the ask orders
             var sortedAsks = exchange.OrderBook.Asks.OrderBy(a => a.Order.Price).ToList();
+            var sortedBids = exchange.OrderBook.Bids.OrderBy(b => b.Order.Price).ToList();
 
-            // Sort bids in ascending order (lowest price first)
-            var sortedBids = exchange.OrderBook.Bids.OrderBy(b => b.Order.Price).ToList(); // Ascending order for bids
-
-            // Create a series for asks
+            // Create bar series for asks and bids
             var askSeries = new BarSeries
             {
                 Title = "Asks",
-                FillColor = OxyColors.Red,
+                FillColor = OxyColors.Brown,
                 YAxisKey = "PriceAxis",
                 XAxisKey = "AmountAxis"
             };
 
-            // Create a series for bids
             var bidSeries = new BarSeries
             {
                 Title = "Bids",
-                FillColor = OxyColors.Green,
+                FillColor = OxyColors.DarkCyan,
                 YAxisKey = "PriceAxis",
                 XAxisKey = "AmountAxis"
             };
 
-            // Set up the CategoryAxis for the Y Axis (price levels) for asks
+            // Set up the Y-axis (price levels) for asks
             var priceAxisAsks = new CategoryAxis
             {
                 Position = AxisPosition.Left,
-                Title = "Price",
                 Key = "PriceAxis",
-                FontSize = 1
+                FontSize = 14
             };
 
-            // Add bars and corresponding price labels for asks
-            foreach (var ask in sortedAsks)
+            // Reduce the number of labels displayed on the Y-axis for asks
+            int labelIntervalAsks = Math.Max(1, sortedAsks.Count / 10);
+            for (int i = 0; i < sortedAsks.Count; i++)
             {
-                askSeries.Items.Add(new BarItem((double)ask.Order.Amount));
-                priceAxisAsks.Labels.Add(ask.Order.Price.ToString());
+                askSeries.Items.Add(new BarItem((double)sortedAsks[i].Order.Amount));
+
+                if (i % labelIntervalAsks == 0)
+                {
+                    priceAxisAsks.Labels.Add(sortedAsks[i].Order.Price.ToString());
+                }
+                else
+                {
+                    priceAxisAsks.Labels.Add(""); // Hide non-interval labels
+                }
             }
 
-            // Set up the CategoryAxis for the Y Axis (price levels) for bids
+            // Set up the Y-axis (price levels) for bids
             var priceAxisBids = new CategoryAxis
             {
                 Position = AxisPosition.Left,
-                Title = "Price",
                 Key = "PriceAxis",
-                FontSize = 1
+                FontSize = 14
             };
 
-            // Add bars and corresponding price labels for bids
-            foreach (var bid in sortedBids)
+            // Reduce the number of labels displayed on the Y-axis for bids
+            int labelIntervalBids = Math.Max(1, sortedBids.Count / 10);
+            for (int i = 0; i < sortedBids.Count; i++)
             {
-                bidSeries.Items.Add(new BarItem((double)bid.Order.Amount));
-                priceAxisBids.Labels.Add(bid.Order.Price.ToString());
+                bidSeries.Items.Add(new BarItem((double)sortedBids[i].Order.Amount));
+
+                if (i % labelIntervalBids == 0)
+                {
+                    priceAxisBids.Labels.Add(sortedBids[i].Order.Price.ToString());
+                }
+                else
+                {
+                    priceAxisBids.Labels.Add(""); // Hide non-interval labels
+                }
+           
+
             }
 
             // Set up the LinearAxis for the X Axis (amounts of BTC)
             var amountAxisAsks = new LinearAxis
             {
                 Position = AxisPosition.Bottom,
-                Title = "Amount",
                 Key = "AmountAxis"
             };
 
@@ -237,35 +289,23 @@ namespace MetaExchangeWPF
             var plotViewAsks = new PlotView
             {
                 Model = modelAsks,
-                Height = 300, // Height of the chart
+                Height = 270, // Height of the chart
                 Margin = new Thickness(0, 0, 0, 0) // Spacing between charts
             };
 
             var plotViewBids = new PlotView
             {
                 Model = modelBids,
-                Height = 300, // Height of the chart
+                Height = 270, // Height of the chart
                 Margin = new Thickness(0, 0, 0, 0) // Spacing between charts
             };
 
-            // Create a grid to stack the bid and ask charts vertically
-            var containerGrid = new Grid
-            {
-                Margin = new Thickness(10, 10, 10, 0),
-                Height = 610,
-                Width = 500
-            };
-
-            // Define two rows for the grid
-            containerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            containerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            // Place the ask chart in the first row
-            Grid.SetRow(plotViewAsks, 0);
+            // Place the ask chart in the second row
+            Grid.SetRow(plotViewAsks, 1);
             containerGrid.Children.Add(plotViewAsks);
 
-            // Place the bid chart in the second row
-            Grid.SetRow(plotViewBids, 1);
+            // Place the bid chart in the third row
+            Grid.SetRow(plotViewBids, 2);
             containerGrid.Children.Add(plotViewBids);
 
             // Add the container grid to the OrderBooksPanel
@@ -273,11 +313,6 @@ namespace MetaExchangeWPF
 
             // Debugging: Verify that charts are added by logging
             Debug.WriteLine($"Charts for exchange {exchange.Id} added.");
-        }
-
-        private void AmountTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-
         }
     }
 }

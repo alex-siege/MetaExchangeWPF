@@ -1,41 +1,84 @@
 ﻿namespace MetaExchangeWPF
 {
+    /// <summary>
+    /// Represents the main exchange data that includes ID, available funds, and the order book.
+    /// </summary>
     public class ExchangeData
     {
-        public string Id { get; set; }
-        public AvailableFunds AvailableFunds { get; set; }
-        public OrderBook OrderBook { get; set; }
+        // Unique identifier for the exchange.
+        public string? Id { get; set; }
+
+        // The available funds (Crypto and Euro) for this exchange.
+        public AvailableFunds? AvailableFunds { get; set; }
+
+        // The order book of the exchange, containing bids and asks.
+        public OrderBook? OrderBook { get; set; }
     }
 
+    /// <summary>
+    /// Represents the available funds (Crypto and Euro) for an exchange.
+    /// </summary>
     public class AvailableFunds
     {
+        // The amount of cryptocurrency (BTC) available in the exchange.
         public decimal Crypto { get; set; }
+
+        // The amount of Euro available in the exchange.
         public decimal Euro { get; set; }
     }
 
+    /// <summary>
+    /// Represents the order book, containing lists of bids and asks for an exchange.
+    /// </summary>
     public class OrderBook
     {
-        public List<BidAsk> Bids { get; set; }
-        public List<BidAsk> Asks { get; set; }
+        // List of bid orders (buyers) in the exchange's order book.
+        public List<BidAsk>? Bids { get; set; }
+
+        // List of ask orders (sellers) in the exchange's order book.
+        public List<BidAsk>? Asks { get; set; }
     }
 
+    /// <summary>
+    /// Represents either a bid or ask order in the exchange's order book.
+    /// </summary>
     public class BidAsk
     {
-        public Order Order { get; set; }
+        // The order details for either a bid (buy) or ask (sell) order.
+        public Order? Order { get; set; }
     }
 
-    public class Order
-    {
-        public string Id { get; set; }
-        public decimal Amount { get; set; }
-        public decimal Price { get; set; }
-    }
-
+    /// <summary>
+    /// Represents an order from an exchange, including its exchange, price, and amount.
+    /// </summary>
     public class ExchangeOrder
     {
-        public string Exchange { get; set; }
-        public Order Order { get; set; }
+        // The exchange where the order is placed (e.g., exchange name or ID).
+        public string? Exchange { get; set; }
+
+        // The price at which the order is executed.
+        public decimal Price { get; set; }
+
+        // The amount of Crypto or Euro in the order.
+        public decimal Amount { get; set; }
+
+        //// (Optional) The order details, including ID, if needed.
+        //public Order? OrderDetails { get; set; }
     }
 
-}
 
+    /// <summary>
+    /// Represents a detailed order including its unique ID, amount, and price.
+    /// </summary>
+    public class Order
+    {
+        // Unique identifier for the order.
+        public string? Id { get; set; }
+
+        // The amount of cryptocurrency involved in the order.
+        public decimal Amount { get; set; }
+
+        // The price at which the order is placed.
+        public decimal Price { get; set; }
+    }
+}
