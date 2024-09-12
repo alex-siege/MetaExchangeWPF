@@ -33,6 +33,9 @@ public class MetaExchangeLogic
         // List of relevant orders, based on order type (Buy or Sell)
         List<ExchangeOrder> relevantOrders;
 
+        // Track the cumulative amount of orders available
+        decimal totalAvailableOrders = 0m;
+
         if (orderType == "Buy")
         {
             // For Buy: Collect all ask orders (Crypto being sold)
@@ -44,8 +47,11 @@ public class MetaExchangeLogic
             // Calculate the total available Crypto across all exchanges
             totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Crypto);
 
-            // Check if the requested amount exceeds the available Crypto
-            exceedsLimit = amount > totalAvailableFunds;
+            // Calculate the total available orders from asks
+            totalAvailableOrders = relevantOrders.Sum(o => o.Amount);
+
+            // Check if the requested amount exceeds the available Crypto or available orders
+            exceedsLimit = amount > totalAvailableFunds || amount > totalAvailableOrders;
         }
         else // Sell
         {
@@ -58,6 +64,9 @@ public class MetaExchangeLogic
             // Calculate the total Euro we would get for selling the requested amount of Crypto
             decimal totalEuroForCrypto = 0m;
             decimal totalAccumulatedAmount = 0m;
+
+            // Calculate the total available bids
+            totalAvailableOrders = relevantOrders.Sum(o => o.Amount);
 
             foreach (var order in relevantOrders)
             {
@@ -74,7 +83,9 @@ public class MetaExchangeLogic
 
             // Compare the total Euro we'd get with the available Euro funds in all exchanges
             totalAvailableFunds = exchanges.Sum(e => e.AvailableFunds.Euro);
-            exceedsLimit = totalEuroForCrypto > totalAvailableFunds;
+
+            // Check if the requested amount exceeds the available Euro or available orders
+            exceedsLimit = totalEuroForCrypto > totalAvailableFunds || amount > totalAvailableOrders;
         }
 
         // If the amount exceeds the limit, return an empty plan

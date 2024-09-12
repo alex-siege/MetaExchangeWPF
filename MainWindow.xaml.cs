@@ -94,9 +94,9 @@ namespace MetaExchangeWPF
                 if (exceedsLimit)
                 {
                     // Display a message if the requested amount exceeds available funds
-                    ResultTextBlock.Text = $"The amount you want to {orderType.ToLower()} exceeds the available funds of all exchanges to cover your transaction.\n" +
-                                           $"Requested: {amount}\n" +
-                                           $"Available: {totalAvailableFunds}";
+                    ResultTextBlock.Text = $"The amount you want to {orderType.ToLower()} exceeds the available funds of all exchanges to cover your transaction or there are not enough orders.\n" +
+                                           $"Requested amount: {amount}\n" +
+                                           $"Available Funds on Exchanges: {totalAvailableFunds}";
                 }
                 else
                 {
