@@ -102,8 +102,8 @@ namespace MetaExchangeWPF
                 {
                     // Display the execution plan results in the result text block
                     ResultTextBlock.Text = $"Best Price (Average): {executionPlan.BestPrice}\n" +
-                                           $"\nOrders:\n" +
-                                           string.Join("\n", executionPlan.ExchangeOrders.Select(o => $"Exchange: {o.Exchange}, Price: {o.Price}, Amount: {o.Amount}"));
+                                           $"\nOrders:" +
+                                           string.Join("\n\n", executionPlan.ExchangeOrders.Select(o => $"Exchange: {o.Exchange}, Price: {o.Price}, Amount: {o.Amount}"));
                 }
             }
             else

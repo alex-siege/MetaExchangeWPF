@@ -4,6 +4,19 @@ using System.IO;
 
 public class MetaExchangeLogic
 {
+    /// Represents an order from an exchange, including its exchange, price, and amount.
+    public class ExchangeOrder
+    {
+        // The exchange where the order is placed (e.g., exchange name or ID).
+        public string? Exchange { get; set; }
+
+        // The price at which the order is executed.
+        public decimal Price { get; set; }
+
+        // The amount of Crypto or Euro in the order.
+        public decimal Amount { get; set; }
+    }
+
     // Class representing the final execution plan, including the best price and a list of exchange orders
     public class ExecutionPlan
     {

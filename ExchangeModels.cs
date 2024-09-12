@@ -1,5 +1,7 @@
 ﻿namespace MetaExchangeWPF
 {
+    // Classes needed to deserialize .json into structs.
+
     /// <summary>
     /// Represents the main exchange data that includes ID, available funds, and the order book.
     /// </summary>
@@ -47,25 +49,6 @@
         // The order details for either a bid (buy) or ask (sell) order.
         public Order? Order { get; set; }
     }
-
-    /// <summary>
-    /// Represents an order from an exchange, including its exchange, price, and amount.
-    /// </summary>
-    public class ExchangeOrder
-    {
-        // The exchange where the order is placed (e.g., exchange name or ID).
-        public string? Exchange { get; set; }
-
-        // The price at which the order is executed.
-        public decimal Price { get; set; }
-
-        // The amount of Crypto or Euro in the order.
-        public decimal Amount { get; set; }
-
-        //// (Optional) The order details, including ID, if needed.
-        //public Order? OrderDetails { get; set; }
-    }
-
 
     /// <summary>
     /// Represents a detailed order including its unique ID, amount, and price.
