@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MetaExchange application is a WPF-based GUI that allows users to interact with multiple cryptocurrency exchanges. The application enables users to execute market orders for Bitcoin (BTC) and provides a detailed execution plan based on the best available prices across all exchanges. Additionally, the application visualizes the state of order books and available funds on each exchange, which are updated dynamically through the interface.
+This application enables users to execute market orders for Bitcoin (BTC) and provides an execution plan based on the best available prices across all provided exchanges. Additionally, the application visualizes the state of order books and available funds on each exchange, which can be updated manually through the interface.
 
 ## Features
 
@@ -24,14 +24,11 @@ After executing the solution, the main window of the application will open. The 
 ### Step 2: Execute a Market Order
 
 1. **Enter the Order Details**:
-   - **Amount**: Enter the amount of BTC you wish to buy or sell.
    - **Order Type**: Select either "Buy" or "Sell" from the dropdown menu.
+   - **Amount**: Enter the amount of BTC you wish to buy or sell.
    
 2. **Execute the Order**:  
    Once you've entered the necessary details, press the **'Execute Order'** button. The application will compute the best execution plan, which will be displayed in the **Result TextBox** in the upper right section of the window.
-
-3. **View the Execution Plan**:  
-   The execution plan will show the best price for your order along with the details of the exchanges used to fulfill it.
 
 ### Step 3: Update Exchange Data
 
@@ -42,7 +39,7 @@ After executing the solution, the main window of the application will open. The 
 
 ### JSON Files
 
-The application reads exchange data from JSON files located in the `exchanges` folder, which is in the working directory of the solution. Each JSON file contains information about an exchange's order book (bids and asks) and available funds (Crypto and Euro). You can replace these files with downsized test files which are located inside **exchanges/test_exchanges_backup** folder.
+The application reads exchange data from JSON files located in the `exchanges` folder, which is in the working directory of the solution. Each JSON file contains information about an exchange's order book (bids and asks) and available funds (Crypto and Euro). You can replace these files with downsized test files which are located inside the `exchanges/test_exchanges_backup` folder.
 
 ## Project Structure
 
